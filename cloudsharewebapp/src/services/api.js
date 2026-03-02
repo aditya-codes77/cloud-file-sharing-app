@@ -1,4 +1,4 @@
-const API_BASE_URL = 'http://localhost:8081/api/v1.0';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8081/api/v1.0';
 
 // API service for file operations
 export const fileAPI = {
