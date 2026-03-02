@@ -1,6 +1,6 @@
 package in.adityakaushik.cloudshareapi;
 
-import org.junit.jupiter.apiTest;
+import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
 @SpringBootTest
