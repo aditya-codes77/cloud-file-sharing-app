@@ -1,5 +1,7 @@
 package in.adityakaushik.cloudshareapi.service;
 
+import com.cloudinary.Cloudinary;
+import com.cloudinary.utils.ObjectUtils;
 import in.adityakaushik.cloudshareapi.document.FileMetadataDocument;
 import in.adityakaushik.cloudshareapi.document.ProfileDocument;
 import in.adityakaushik.cloudshareapi.dto.FileMetadataDTO;
@@ -27,23 +29,29 @@ public class FileMetadataService {
     private final ProfileService profileService;
     private final UserCreditsService userCreditsService;
     private final FileMetaDataRepository fileMetadataRepository;
+    private final Cloudinary cloudinary;
 
     public List<FileMetadataDTO> uploadFiles(MultipartFile[] files) {
         try {
             ProfileDocument currentProfile = profileService.getCurrentProfile();
             List<FileMetadataDocument> savedFiles = new ArrayList<>();
 
-            Path uploadPath = Paths.get("uploads").toAbsolutePath().normalize();
-            Files.createDirectories(uploadPath);
-
             for (MultipartFile file : files) {
-                String cleaned = StringUtils.cleanPath(file.getOriginalFilename());
-                String fileName = UUID.randomUUID().toString() + "_" + cleaned;
-                Path targetLocation = uploadPath.resolve(fileName);
-                Files.copy(file.getInputStream(), targetLocation, StandardCopyOption.REPLACE_EXISTING);
+                Map uploadResult = cloudinary.uploader().upload(
+                    file.getBytes(),
+                    ObjectUtils.asMap(
+                        "resource_type", "auto",
+                        "original_filename", file.getOriginalFilename(),
+                        "use_filename", true
+                    )
+                );
+
+                String cloudinaryUrl = (String) uploadResult.get("secure_url");
+                String publicId = (String) uploadResult.get("public_id");
 
                 FileMetadataDocument fileMetadata = FileMetadataDocument.builder()
-                        .fileLocation(targetLocation.toString())
+                        .fileLocation(cloudinaryUrl)
+                        .cloudinaryPublicId(publicId)
                         .name(file.getOriginalFilename())
                         .size(file.getSize())
                         .type(file.getContentType())
@@ -123,7 +131,6 @@ public class FileMetadataService {
         if (!file.isPublic()) throw new RuntimeException("File is not public");
         return file;
     }
-
     public boolean deleteUserFile(String fileId) {
         try {
             Optional<FileMetadataDocument> fileOpt = fileMetadataRepository.findById(fileId);
