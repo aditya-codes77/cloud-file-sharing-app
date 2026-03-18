@@ -57,7 +57,8 @@ const MyFiles = () => {
             const token = await getToken();
             
             // Create download URL
-            const downloadUrl = `http://localhost:8081/api/v1.0/files/${file.id}/download`;
+            const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8081/api/v1.0';
+            const downloadUrl = `${API_BASE}/files/${file.id}/download`;
             
             // Create temporary link and trigger download
             const link = document.createElement('a');
