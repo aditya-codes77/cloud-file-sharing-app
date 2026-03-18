@@ -77,17 +77,21 @@ export const fileAPI = {
                 'Authorization': `Bearer ${token}`,
             },
         });
-        
+
         if (!response.ok) {
-            throw new Error('Failed to download file');
+            const err = await response.json().catch(() => ({}));
+            throw new Error(err.message || 'Failed to download file');
         }
-        
-        const { url } = await response.json();
+
+        const blob = await response.blob();
+        const blobUrl = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
-        a.href = url;
+        a.href = blobUrl;
         a.download = fileName || 'download';
-        a.target = '_blank';
+        document.body.appendChild(a);
         a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(blobUrl);
     },
 
     // Get public file (no auth required)

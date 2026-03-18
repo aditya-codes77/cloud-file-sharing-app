@@ -8,6 +8,7 @@ import in.adityakaushik.cloudshareapi.dto.FileMetadataDTO;
 import in.adityakaushik.cloudshareapi.service.FileMetadataService;
 import in.adityakaushik.cloudshareapi.service.UserCreditsService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -77,7 +78,7 @@ public class FileController {
     public ResponseEntity<?> downloadPublicFile(@PathVariable String fileId) {
         try {
             FileMetadataDocument file = fileMetadataService.getPublicFileForDownload(fileId);
-            return ResponseEntity.ok(Map.of("url", file.getFileLocation()));
+            return streamFile(file);
         } catch (Exception e) {
             return ResponseEntity.status(404).body(Map.of(
                 "error", "File not found or not public",
@@ -90,13 +91,32 @@ public class FileController {
     public ResponseEntity<?> downloadFile(@PathVariable String fileId) {
         try {
             FileMetadataDocument file = fileMetadataService.getFileForDownload(fileId);
-            return ResponseEntity.ok(Map.of("url", file.getFileLocation()));
+            return streamFile(file);
         } catch (Exception e) {
             return ResponseEntity.status(404).body(Map.of(
                 "error", "File not found or access denied",
                 "message", e.getMessage()
             ));
         }
+    }
+
+    private ResponseEntity<?> streamFile(FileMetadataDocument file) throws Exception {
+        String location = file.getFileLocation();
+        if (location == null || !location.startsWith("http")) {
+            return ResponseEntity.status(410).body(Map.of(
+                "error", "File no longer available",
+                "message", "This file was stored on the old server and is no longer accessible. Please re-upload."
+            ));
+        }
+        java.net.URL url = new java.net.URL(location);
+        java.net.HttpURLConnection conn = (java.net.HttpURLConnection) url.openConnection();
+        conn.setRequestProperty("User-Agent", "Mozilla/5.0");
+        byte[] bytes = conn.getInputStream().readAllBytes();
+        String contentType = conn.getContentType() != null ? conn.getContentType() : "application/octet-stream";
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + file.getName() + "\"")
+                .header(HttpHeaders.CONTENT_TYPE, contentType)
+                .body(bytes);
     }
 
     @DeleteMapping("/{fileId}")
