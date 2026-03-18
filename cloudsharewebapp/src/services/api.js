@@ -78,9 +78,13 @@ export const fileAPI = {
             },
         });
 
-        if (!response.ok) {
+        if (response.status === 410 || response.status === 502) {
             const err = await response.json().catch(() => ({}));
-            throw new Error(err.message || 'Failed to download file');
+            throw new Error(err.message || 'File no longer available');
+        }
+
+        if (!response.ok) {
+            throw new Error('Failed to download file');
         }
 
         const blob = await response.blob();

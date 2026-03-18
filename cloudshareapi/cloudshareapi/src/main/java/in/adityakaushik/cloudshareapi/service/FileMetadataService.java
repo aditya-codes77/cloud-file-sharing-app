@@ -105,6 +105,22 @@ public class FileMetadataService {
     }
 
 
+    public String getSignedDownloadUrl(FileMetadataDocument file) {
+        try {
+            if (file.getCloudinaryPublicId() != null) {
+                return cloudinary.url()
+                    .resourceType("auto")
+                    .type("upload")
+                    .signed(true)
+                    .transformation(new com.cloudinary.Transformation().flags("attachment"))
+                    .generate(file.getCloudinaryPublicId());
+            }
+            return file.getFileLocation();
+        } catch (Exception e) {
+            return file.getFileLocation();
+        }
+    }
+
     public FileMetadataDTO getPublicFile(String fileId) {
         try {
             Optional<FileMetadataDocument> fileOpt = fileMetadataRepository.findById(fileId);

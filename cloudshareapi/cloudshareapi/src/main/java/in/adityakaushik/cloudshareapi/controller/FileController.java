@@ -108,9 +108,19 @@ public class FileController {
                 "message", "This file was stored on the old server and is no longer accessible. Please re-upload."
             ));
         }
-        java.net.URL url = new java.net.URL(location);
+        // Use Cloudinary signed download URL to avoid 401 on raw delivery
+        String downloadUrl = fileMetadataService.getSignedDownloadUrl(file);
+        java.net.URL url = new java.net.URL(downloadUrl);
         java.net.HttpURLConnection conn = (java.net.HttpURLConnection) url.openConnection();
+        conn.setInstanceFollowRedirects(true);
         conn.setRequestProperty("User-Agent", "Mozilla/5.0");
+        int status = conn.getResponseCode();
+        if (status == 401 || status == 403) {
+            return ResponseEntity.status(502).body(Map.of(
+                "error", "Could not fetch file from storage",
+                "message", "Storage access denied. Please re-upload the file."
+            ));
+        }
         byte[] bytes = conn.getInputStream().readAllBytes();
         String contentType = conn.getContentType() != null ? conn.getContentType() : "application/octet-stream";
         return ResponseEntity.ok()
