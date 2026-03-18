@@ -16,8 +16,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
-import org.springframework.http.HttpHeaders;
-
 import java.util.List;
 import java.util.Map;
 
@@ -79,9 +77,7 @@ public class FileController {
     public ResponseEntity<?> downloadPublicFile(@PathVariable String fileId) {
         try {
             FileMetadataDocument file = fileMetadataService.getPublicFileForDownload(fileId);
-            return ResponseEntity.status(302)
-                    .header(HttpHeaders.LOCATION, file.getFileLocation())
-                    .build();
+            return ResponseEntity.ok(Map.of("url", file.getFileLocation()));
         } catch (Exception e) {
             return ResponseEntity.status(404).body(Map.of(
                 "error", "File not found or not public",
@@ -94,9 +90,7 @@ public class FileController {
     public ResponseEntity<?> downloadFile(@PathVariable String fileId) {
         try {
             FileMetadataDocument file = fileMetadataService.getFileForDownload(fileId);
-            return ResponseEntity.status(302)
-                    .header(HttpHeaders.LOCATION, file.getFileLocation())
-                    .build();
+            return ResponseEntity.ok(Map.of("url", file.getFileLocation()));
         } catch (Exception e) {
             return ResponseEntity.status(404).body(Map.of(
                 "error", "File not found or access denied",

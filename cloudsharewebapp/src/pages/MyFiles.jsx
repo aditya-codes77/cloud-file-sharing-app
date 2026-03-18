@@ -55,39 +55,9 @@ const MyFiles = () => {
 
         try {
             const token = await getToken();
-            
-            // Create download URL
-            const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8081/api/v1.0';
-            const downloadUrl = `${API_BASE}/files/${file.id}/download`;
-            
-            // Create temporary link and trigger download
-            const link = document.createElement('a');
-            link.href = downloadUrl;
-            link.download = file.name || file.fileName;
-            
-            // Add authorization header by fetching with credentials
-            const response = await fetch(downloadUrl, {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            });
-            
-            if (!response.ok) throw new Error('Download failed');
-            
-            const blob = await response.blob();
-            const blobUrl = window.URL.createObjectURL(blob);
-            
-            link.href = blobUrl;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            
-            window.URL.revokeObjectURL(blobUrl);
-            
-            // Deduct credits and add transaction
+            await fileAPI.downloadFile(token, file.id, file.name || file.fileName);
             deductCredits(1, userId);
             addTransaction('download', `Downloaded ${file.name}`, -1, null, userId);
-            
             toast.success('Download started!');
         } catch (error) {
             console.error('Download error:', error);

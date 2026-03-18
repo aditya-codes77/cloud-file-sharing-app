@@ -70,7 +70,7 @@ export const fileAPI = {
     },
 
     // Download a file
-    downloadFile: async (token, fileId) => {
+    downloadFile: async (token, fileId, fileName) => {
         const response = await fetch(`${API_BASE_URL}/files/${fileId}/download`, {
             method: 'GET',
             headers: {
@@ -82,7 +82,12 @@ export const fileAPI = {
             throw new Error('Failed to download file');
         }
         
-        return response.blob();
+        const { url } = await response.json();
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName || 'download';
+        a.target = '_blank';
+        a.click();
     },
 
     // Get public file (no auth required)
