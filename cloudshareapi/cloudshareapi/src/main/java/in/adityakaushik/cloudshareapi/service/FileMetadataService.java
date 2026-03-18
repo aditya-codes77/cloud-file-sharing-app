@@ -116,6 +116,14 @@ public class FileMetadataService {
         }
     }
 
+    public FileMetadataDocument getPublicFileForDownload(String fileId) {
+        Optional<FileMetadataDocument> fileOpt = fileMetadataRepository.findById(fileId);
+        if (fileOpt.isEmpty()) throw new RuntimeException("File not found");
+        FileMetadataDocument file = fileOpt.get();
+        if (!file.isPublic()) throw new RuntimeException("File is not public");
+        return file;
+    }
+
     public boolean deleteUserFile(String fileId) {
         try {
             Optional<FileMetadataDocument> fileOpt = fileMetadataRepository.findById(fileId);

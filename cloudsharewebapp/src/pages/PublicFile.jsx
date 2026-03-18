@@ -29,13 +29,17 @@ const PublicFile = () => {
     const handleDownload = async () => {
         try {
             const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8081/api/v1.0';
-            const downloadUrl = `${API_BASE}/files/${fileId}/download`;
+            const response = await fetch(`${API_BASE}/files/public/${fileId}/download`);
+            if (!response.ok) throw new Error('Download failed');
+            const blob = await response.blob();
+            const blobUrl = window.URL.createObjectURL(blob);
             const link = document.createElement('a');
-            link.href = downloadUrl;
+            link.href = blobUrl;
             link.download = file.name;
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
+            window.URL.revokeObjectURL(blobUrl);
             toast.success('Download started!');
         } catch (err) {
             toast.error('Failed to download file');

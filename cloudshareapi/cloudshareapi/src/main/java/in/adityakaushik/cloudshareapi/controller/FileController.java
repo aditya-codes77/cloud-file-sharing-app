@@ -29,7 +29,7 @@ import java.nio.file.Paths;
 import java.util.List;
 import java.util.Map;
 
-@CrossOrigin(origins = "http://localhost:5173")
+@CrossOrigin(origins = {"http://localhost:5173", "https://cloud-file-sharing-app.vercel.app"})
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/files")
@@ -88,8 +88,29 @@ public class FileController {
     public ResponseEntity<?> getPublicFile(@PathVariable String fileId) {
         try {
             FileMetadataDTO publicFile = fileMetadataService.getPublicFile(fileId);
-            
             return ResponseEntity.ok(publicFile);
+        } catch (Exception e) {
+            return ResponseEntity.status(404).body(Map.of(
+                "error", "File not found or not public",
+                "message", e.getMessage()
+            ));
+        }
+    }
+
+    @GetMapping("/public/{fileId}/download")
+    public ResponseEntity<?> downloadPublicFile(@PathVariable String fileId) {
+        try {
+            FileMetadataDocument file = fileMetadataService.getPublicFileForDownload(fileId);
+            Path filePath = Paths.get(file.getFileLocation());
+            if (!Files.exists(filePath)) {
+                return ResponseEntity.status(404).body(Map.of("error", "Physical file not found"));
+            }
+            Resource resource = new UrlResource(filePath.toUri());
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + file.getName() + "\"")
+                    .header(HttpHeaders.CONTENT_TYPE, file.getType())
+                    .header(HttpHeaders.CONTENT_LENGTH, String.valueOf(file.getSize()))
+                    .body(resource);
         } catch (Exception e) {
             return ResponseEntity.status(404).body(Map.of(
                 "error", "File not found or not public",
