@@ -61,9 +61,24 @@ const MyFiles = () => {
             toast.success('Download started!');
         } catch (error) {
             console.error('Download error:', error);
-            toast.error('Failed to download file');
+            toast.error(error.message || 'Failed to download file');
         }
     };
+
+    // Handle cleanup of legacy files
+    const handleCleanup = async () => {
+        if (!confirm('This will permanently delete all files that were uploaded before Cloudinary was set up. Continue?')) return;
+        try {
+            const token = await getToken();
+            const result = await fileAPI.cleanupLegacyFiles(token);
+            toast.success(`Cleaned up ${result.deletedCount} old file(s)`);
+            fetchFiles();
+        } catch (error) {
+            toast.error('Cleanup failed');
+        }
+    };
+
+    const hasLegacyFiles = files.some(f => !f.fileLocation || !f.fileLocation.startsWith('http'));
 
     // Handle file deletion
     const handleDelete = async (fileId) => {
@@ -162,6 +177,19 @@ const MyFiles = () => {
                 </div>
             </div>
             
+            {/* Legacy files warning banner */}
+            {hasLegacyFiles && (
+                <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg flex items-center justify-between">
+                    <p className="text-sm text-yellow-800">⚠️ Some files were uploaded before cloud storage was set up and can no longer be downloaded.</p>
+                    <button
+                        onClick={handleCleanup}
+                        className="ml-4 px-3 py-1 bg-yellow-500 hover:bg-yellow-600 text-white text-xs rounded-lg font-medium whitespace-nowrap"
+                    >
+                        Remove old files
+                    </button>
+                </div>
+            )}
+
             {/* Files Content */}
             <div className="mt-6">
                 {loading ? (

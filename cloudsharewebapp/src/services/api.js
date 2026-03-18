@@ -98,6 +98,16 @@ export const fileAPI = {
         window.URL.revokeObjectURL(blobUrl);
     },
 
+    // Clean up legacy files with dead local paths
+    cleanupLegacyFiles: async (token) => {
+        const response = await fetch(`${API_BASE_URL}/files/cleanup-legacy`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${token}` },
+        });
+        if (!response.ok) throw new Error('Cleanup failed');
+        return response.json();
+    },
+
     // Get public file (no auth required)
     getPublicFile: async (fileId) => {
         const response = await fetch(`${API_BASE_URL}/files/public/${fileId}`, {

@@ -129,6 +129,19 @@ public class FileController {
                 .body(bytes);
     }
 
+    @DeleteMapping("/cleanup-legacy")
+    public ResponseEntity<?> cleanupLegacyFiles() {
+        try {
+            int deleted = fileMetadataService.deleteLegacyFiles();
+            return ResponseEntity.ok(Map.of(
+                "message", "Cleanup complete",
+                "deletedCount", deleted
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
+        }
+    }
+
     @DeleteMapping("/{fileId}")
     public ResponseEntity<?> deleteFile(@PathVariable String fileId) {
         try {

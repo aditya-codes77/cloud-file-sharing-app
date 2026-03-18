@@ -105,6 +105,20 @@ public class FileMetadataService {
     }
 
 
+    public int deleteLegacyFiles() {
+        ProfileDocument currentProfile = profileService.getCurrentProfile();
+        List<FileMetadataDocument> userFiles = fileMetadataRepository.findByClerkId(currentProfile.getClerkId());
+        int count = 0;
+        for (FileMetadataDocument f : userFiles) {
+            String loc = f.getFileLocation();
+            if (loc == null || !loc.startsWith("http")) {
+                fileMetadataRepository.delete(f);
+                count++;
+            }
+        }
+        return count;
+    }
+
     public String getSignedDownloadUrl(FileMetadataDocument file) {
         try {
             if (file.getCloudinaryPublicId() != null) {
