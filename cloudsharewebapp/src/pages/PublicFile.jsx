@@ -28,7 +28,8 @@ const PublicFile = () => {
 
     const handleDownload = async () => {
         try {
-            const downloadUrl = `http://localhost:8081/api/v1.0/files/${fileId}/download`;
+            const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8081/api/v1.0';
+            const downloadUrl = `${API_BASE}/files/${fileId}/download`;
             const link = document.createElement('a');
             link.href = downloadUrl;
             link.download = file.name;
