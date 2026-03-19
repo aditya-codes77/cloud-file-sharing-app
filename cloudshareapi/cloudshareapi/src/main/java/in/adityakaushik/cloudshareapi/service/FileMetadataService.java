@@ -7,6 +7,7 @@ import in.adityakaushik.cloudshareapi.document.ProfileDocument;
 import in.adityakaushik.cloudshareapi.dto.FileMetadataDTO;
 import in.adityakaushik.cloudshareapi.repository.FileMetaDataRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
@@ -198,30 +199,21 @@ public class FileMetadataService {
     }
 
     public FileMetadataDocument getFileForDownload(String fileId) {
-        try {
-            Optional<FileMetadataDocument> fileOpt = fileMetadataRepository.findById(fileId);
-            
-            if (fileOpt.isEmpty()) {
-                throw new RuntimeException("File not found");
-            }
-            
-            FileMetadataDocument file = fileOpt.get();
-            
-            // If file is public, allow download without auth check
-            if (file.isPublic()) {
-                return file;
-            }
-            
-            // For private files, check ownership
-            ProfileDocument currentProfile = profileService.getCurrentProfile();
-            if (file.getClerkId() == null || !file.getClerkId().equals(currentProfile.getClerkId())) {
-                throw new RuntimeException("File not found or access denied");
-            }
-            
+        Optional<FileMetadataDocument> fileOpt = fileMetadataRepository.findById(fileId);
+        if (fileOpt.isEmpty()) throw new RuntimeException("File not found");
+
+        FileMetadataDocument file = fileOpt.get();
+
+        // Public files — no auth check needed
+        if (file.isPublic()) return file;
+
+        // Private files — check ownership
+        String clerkId = SecurityContextHolder.getContext().getAuthentication().getName();
+        if (file.getClerkId() == null || file.getClerkId().equals(clerkId)) {
             return file;
-        } catch (Exception e) {
-            throw new RuntimeException("Error accessing file: " + e.getMessage(), e);
         }
+
+        throw new RuntimeException("File not found or access denied");
     }
 
     public FileMetadataDTO toggleFileVisibility(String fileId) {
