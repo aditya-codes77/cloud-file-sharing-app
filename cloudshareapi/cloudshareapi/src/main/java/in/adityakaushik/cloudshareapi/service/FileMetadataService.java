@@ -133,6 +133,30 @@ public class FileMetadataService {
         return count;
     }
 
+    public String buildSignedUrl(FileMetadataDocument file) {
+        try {
+            // Use Cloudinary private_download_url which generates a signed URL
+            // that works for ALL resource types including raw files and PDFs
+            Map options = ObjectUtils.asMap(
+                "resource_type", "auto",
+                "expires_at", (System.currentTimeMillis() / 1000) + 300
+            );
+            return cloudinary.privateDownload(
+                file.getCloudinaryPublicId(),
+                getFormatFromName(file.getName()),
+                options
+            );
+        } catch (Exception e) {
+            System.out.println("DEBUG buildSignedUrl error: " + e.getMessage());
+            return file.getFileLocation();
+        }
+    }
+
+    private String getFormatFromName(String fileName) {
+        if (fileName == null || !fileName.contains(".")) return "";
+        return fileName.substring(fileName.lastIndexOf('.') + 1).toLowerCase();
+    }
+
     public String getSignedDownloadUrl(FileMetadataDocument file) {
         try {
             if (file.getCloudinaryPublicId() != null) {

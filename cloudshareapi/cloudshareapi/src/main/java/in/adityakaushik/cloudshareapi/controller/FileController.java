@@ -109,8 +109,12 @@ public class FileController {
             ));
         }
         try {
-            java.net.URL url = new java.net.URL(location);
-            java.net.HttpURLConnection conn = (java.net.HttpURLConnection) url.openConnection();
+            // Generate a signed Cloudinary URL to avoid 401 on raw/non-image delivery
+            String fetchUrl = location;
+            if (file.getCloudinaryPublicId() != null) {
+                fetchUrl = fileMetadataService.buildSignedUrl(file);
+            }
+            java.net.HttpURLConnection conn = (java.net.HttpURLConnection) new java.net.URL(fetchUrl).openConnection();
             conn.setInstanceFollowRedirects(true);
             conn.setRequestProperty("User-Agent", "Mozilla/5.0");
             int status = conn.getResponseCode();
