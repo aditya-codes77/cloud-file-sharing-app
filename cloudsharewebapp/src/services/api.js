@@ -80,11 +80,12 @@ export const fileAPI = {
 
         if (response.status === 410 || response.status === 502) {
             const err = await response.json().catch(() => ({}));
-            throw new Error(err.message || 'File no longer available');
+            throw new Error(err.message || 'File no longer available. Please re-upload.');
         }
 
         if (!response.ok) {
-            throw new Error('Failed to download file');
+            const err = await response.json().catch(() => ({}));
+            throw new Error(err.message || 'Failed to download file');
         }
 
         const blob = await response.blob();
