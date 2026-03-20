@@ -78,8 +78,7 @@ public class FileController {
     public ResponseEntity<?> downloadFile(@PathVariable String fileId) {
         try {
             FileMetadataDocument file = fileMetadataService.getFileForDownload(fileId);
-            String signedUrl = fileMetadataService.buildSignedUrl(file);
-            return ResponseEntity.ok(Map.of("url", signedUrl, "name", file.getName()));
+            return proxyDownload(file);
         } catch (Exception e) {
             return ResponseEntity.status(404).body(Map.of(
                 "error", "File not found or access denied",
@@ -92,8 +91,7 @@ public class FileController {
     public ResponseEntity<?> downloadPublicFile(@PathVariable String fileId) {
         try {
             FileMetadataDocument file = fileMetadataService.getPublicFileForDownload(fileId);
-            String signedUrl = fileMetadataService.buildSignedUrl(file);
-            return ResponseEntity.ok(Map.of("url", signedUrl, "name", file.getName()));
+            return proxyDownload(file);
         } catch (Exception e) {
             return ResponseEntity.status(404).body(Map.of(
                 "error", "File not found or not public",
@@ -102,7 +100,40 @@ public class FileController {
         }
     }
 
+    private ResponseEntity<?> proxyDownload(FileMetadataDocument file) {
+        String location = file.getFileLocation();
+        if (location == null || !location.startsWith("http")) {
+            return ResponseEntity.status(410).body(
+                Map.of("error", "File no longer available", "message", "Please re-upload this file.")
+            );
+        }
+        try {
+            java.net.HttpURLConnection conn =
+                (java.net.HttpURLConnection) new java.net.URL(location).openConnection();
+            conn.setRequestProperty("User-Agent", "Mozilla/5.0");
+            conn.setInstanceFollowRedirects(true);
+            conn.connect();
+            if (conn.getResponseCode() >= 400) {
+                return ResponseEntity.status(410).body(
+                    Map.of("error", "File no longer available", "message", "Please re-upload this file.")
+                );
+            }
+            byte[] bytes = conn.getInputStream().readAllBytes();
+            String ct = conn.getContentType();
+            String contentType = (ct != null ? ct.split(";")[0].trim() : "application/octet-stream");
+            return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + file.getName() + "\"")
+                .header(HttpHeaders.CONTENT_TYPE, contentType)
+                .header(HttpHeaders.CONTENT_LENGTH, String.valueOf(bytes.length))
+                .body(bytes);
+        } catch (Exception e) {
+            return ResponseEntity.status(502).body(
+                Map.of("error", "Download failed", "message", e.getMessage())
+            );
+        }
+    }
 
+    @DeleteMapping("/cleanup-legacy")
     public ResponseEntity<?> cleanupLegacyFiles() {
         try {
             int deleted = fileMetadataService.deleteLegacyFiles();
