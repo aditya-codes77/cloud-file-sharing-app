@@ -107,12 +107,25 @@ public class FileMetadataService {
 
 
     public int deleteLegacyFiles() {
-        ProfileDocument currentProfile = profileService.getCurrentProfile();
-        List<FileMetadataDocument> userFiles = fileMetadataRepository.findByClerkId(currentProfile.getClerkId());
+        String clerkId = SecurityContextHolder.getContext().getAuthentication().getName();
+        List<FileMetadataDocument> userFiles = fileMetadataRepository.findByClerkId(clerkId);
         int count = 0;
         for (FileMetadataDocument f : userFiles) {
             String loc = f.getFileLocation();
-            if (loc == null || !loc.startsWith("http")) {
+            boolean isLegacy = (loc == null || !loc.startsWith("http"));
+            boolean isDeadCloudinary = false;
+            if (!isLegacy) {
+                try {
+                    java.net.HttpURLConnection conn = (java.net.HttpURLConnection) new java.net.URL(loc).openConnection();
+                    conn.setRequestMethod("HEAD");
+                    conn.setConnectTimeout(5000);
+                    conn.setReadTimeout(5000);
+                    isDeadCloudinary = conn.getResponseCode() >= 400;
+                } catch (Exception ignored) {
+                    isDeadCloudinary = true;
+                }
+            }
+            if (isLegacy || isDeadCloudinary) {
                 fileMetadataRepository.delete(f);
                 count++;
             }
