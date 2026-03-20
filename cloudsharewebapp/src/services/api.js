@@ -73,30 +73,22 @@ export const fileAPI = {
     downloadFile: async (token, fileId, fileName) => {
         const response = await fetch(`${API_BASE_URL}/files/${fileId}/download`, {
             method: 'GET',
-            headers: {
-                'Authorization': `Bearer ${token}`,
-            },
+            headers: { 'Authorization': `Bearer ${token}` },
         });
-
-        if (response.status === 410 || response.status === 502) {
-            const err = await response.json().catch(() => ({}));
-            throw new Error(err.message || 'File no longer available. Please re-upload.');
-        }
 
         if (!response.ok) {
             const err = await response.json().catch(() => ({}));
             throw new Error(err.message || 'Failed to download file');
         }
 
-        const blob = await response.blob();
-        const blobUrl = window.URL.createObjectURL(blob);
+        const { url, name } = await response.json();
         const a = document.createElement('a');
-        a.href = blobUrl;
-        a.download = fileName || 'download';
+        a.href = url;
+        a.download = name || fileName || 'download';
+        a.target = '_blank';
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
-        window.URL.revokeObjectURL(blobUrl);
     },
 
     // Clean up legacy files with dead local paths

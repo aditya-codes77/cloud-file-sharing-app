@@ -134,27 +134,31 @@ public class FileMetadataService {
     }
 
     public String buildSignedUrl(FileMetadataDocument file) {
+        String location = file.getFileLocation();
+        if (location == null || !location.startsWith("http")) {
+            return null;
+        }
+        if (file.getCloudinaryPublicId() == null) {
+            return location;
+        }
         try {
-            // Use Cloudinary private_download_url which generates a signed URL
-            // that works for ALL resource types including raw files and PDFs
-            Map options = ObjectUtils.asMap(
-                "resource_type", "auto",
-                "expires_at", (System.currentTimeMillis() / 1000) + 300
-            );
-            return cloudinary.privateDownload(
-                file.getCloudinaryPublicId(),
-                getFormatFromName(file.getName()),
-                options
-            );
+            // Determine resource type from MIME type
+            String resourceType = "image";
+            String mimeType = file.getType();
+            if (mimeType != null) {
+                if (mimeType.startsWith("video/")) resourceType = "video";
+                else if (!mimeType.startsWith("image/")) resourceType = "raw";
+            }
+            return cloudinary.url()
+                .resourceType(resourceType)
+                .type("upload")
+                .signed(true)
+                .transformation(new com.cloudinary.Transformation().flags("attachment"))
+                .generate(file.getCloudinaryPublicId());
         } catch (Exception e) {
             System.out.println("DEBUG buildSignedUrl error: " + e.getMessage());
-            return file.getFileLocation();
+            return location;
         }
-    }
-
-    private String getFormatFromName(String fileName) {
-        if (fileName == null || !fileName.contains(".")) return "";
-        return fileName.substring(fileName.lastIndexOf('.') + 1).toLowerCase();
     }
 
     public String getSignedDownloadUrl(FileMetadataDocument file) {

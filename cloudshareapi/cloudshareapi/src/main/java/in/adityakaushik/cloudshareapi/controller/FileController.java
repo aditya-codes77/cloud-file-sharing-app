@@ -74,24 +74,12 @@ public class FileController {
         }
     }
 
-    @GetMapping("/public/{fileId}/download")
-    public ResponseEntity<?> downloadPublicFile(@PathVariable String fileId) {
-        try {
-            FileMetadataDocument file = fileMetadataService.getPublicFileForDownload(fileId);
-            return streamFile(file);
-        } catch (Exception e) {
-            return ResponseEntity.status(404).body(Map.of(
-                "error", "File not found or not public",
-                "message", e.getMessage()
-            ));
-        }
-    }
-
     @GetMapping("/{fileId}/download")
     public ResponseEntity<?> downloadFile(@PathVariable String fileId) {
         try {
             FileMetadataDocument file = fileMetadataService.getFileForDownload(fileId);
-            return streamFile(file);
+            String signedUrl = fileMetadataService.buildSignedUrl(file);
+            return ResponseEntity.ok(Map.of("url", signedUrl, "name", file.getName()));
         } catch (Exception e) {
             return ResponseEntity.status(404).body(Map.of(
                 "error", "File not found or access denied",
@@ -100,45 +88,21 @@ public class FileController {
         }
     }
 
-    private ResponseEntity<?> streamFile(FileMetadataDocument file) {
-        String location = file.getFileLocation();
-        if (location == null || !location.startsWith("http")) {
-            return ResponseEntity.status(410).body(Map.of(
-                "error", "File no longer available",
-                "message", "This file was stored on the old server and is no longer accessible. Please re-upload."
-            ));
-        }
+    @GetMapping("/public/{fileId}/download")
+    public ResponseEntity<?> downloadPublicFile(@PathVariable String fileId) {
         try {
-            // Generate a signed Cloudinary URL to avoid 401 on raw/non-image delivery
-            String fetchUrl = location;
-            if (file.getCloudinaryPublicId() != null) {
-                fetchUrl = fileMetadataService.buildSignedUrl(file);
-            }
-            java.net.HttpURLConnection conn = (java.net.HttpURLConnection) new java.net.URL(fetchUrl).openConnection();
-            conn.setInstanceFollowRedirects(true);
-            conn.setRequestProperty("User-Agent", "Mozilla/5.0");
-            int status = conn.getResponseCode();
-            if (status >= 400) {
-                return ResponseEntity.status(502).body(Map.of(
-                    "error", "Could not fetch file from storage",
-                    "message", "Storage returned " + status + ". Please re-upload the file."
-                ));
-            }
-            byte[] bytes = conn.getInputStream().readAllBytes();
-            String contentType = conn.getContentType() != null ? conn.getContentType() : "application/octet-stream";
-            return ResponseEntity.ok()
-                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + file.getName() + "\"")
-                    .header(HttpHeaders.CONTENT_TYPE, contentType)
-                    .body(bytes);
+            FileMetadataDocument file = fileMetadataService.getPublicFileForDownload(fileId);
+            String signedUrl = fileMetadataService.buildSignedUrl(file);
+            return ResponseEntity.ok(Map.of("url", signedUrl, "name", file.getName()));
         } catch (Exception e) {
-            return ResponseEntity.status(502).body(Map.of(
-                "error", "Failed to fetch file from storage",
+            return ResponseEntity.status(404).body(Map.of(
+                "error", "File not found or not public",
                 "message", e.getMessage()
             ));
         }
     }
 
-    @DeleteMapping("/cleanup-legacy")
+
     public ResponseEntity<?> cleanupLegacyFiles() {
         try {
             int deleted = fileMetadataService.deleteLegacyFiles();
