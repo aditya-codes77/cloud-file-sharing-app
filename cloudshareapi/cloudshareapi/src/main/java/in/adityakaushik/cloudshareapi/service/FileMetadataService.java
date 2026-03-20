@@ -39,6 +39,7 @@ public class FileMetadataService {
             List<FileMetadataDocument> savedFiles = new ArrayList<>();
 
             for (MultipartFile file : files) {
+                System.out.println("DEBUG upload: uploading " + file.getOriginalFilename() + " size=" + file.getSize());
                 Map uploadResult = cloudinary.uploader().upload(
                     file.getBytes(),
                     ObjectUtils.asMap(
@@ -47,9 +48,14 @@ public class FileMetadataService {
                         "use_filename", true
                     )
                 );
+                System.out.println("DEBUG upload result: " + uploadResult);
 
                 String cloudinaryUrl = (String) uploadResult.get("secure_url");
                 String publicId = (String) uploadResult.get("public_id");
+
+                if (cloudinaryUrl == null) {
+                    throw new RuntimeException("Cloudinary upload failed - no URL returned. Result: " + uploadResult);
+                }
 
                 FileMetadataDocument fileMetadata = FileMetadataDocument.builder()
                         .fileLocation(cloudinaryUrl)
