@@ -8,6 +8,7 @@ import in.adityakaushik.cloudshareapi.dto.FileMetadataDTO;
 import in.adityakaushik.cloudshareapi.service.FileMetadataService;
 import in.adityakaushik.cloudshareapi.service.UserCreditsService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -77,7 +78,7 @@ public class FileController {
     public ResponseEntity<?> downloadFile(@PathVariable String fileId) {
         try {
             FileMetadataDocument file = fileMetadataService.getFileForDownload(fileId);
-            return buildDownloadUrlResponse(file);
+            return proxyDownload(file);
         } catch (Exception e) {
             return ResponseEntity.status(404).body(Map.of(
                 "error", "File not found or access denied",
@@ -90,7 +91,7 @@ public class FileController {
     public ResponseEntity<?> downloadPublicFile(@PathVariable String fileId) {
         try {
             FileMetadataDocument file = fileMetadataService.getPublicFileForDownload(fileId);
-            return buildDownloadUrlResponse(file);
+            return proxyDownload(file);
         } catch (Exception e) {
             return ResponseEntity.status(404).body(Map.of(
                 "error", "File not found or not public",
@@ -99,14 +100,44 @@ public class FileController {
         }
     }
 
-    private ResponseEntity<?> buildDownloadUrlResponse(FileMetadataDocument file) {
+    private ResponseEntity<?> proxyDownload(FileMetadataDocument file) {
         String location = file.getFileLocation();
         if (location == null || !location.startsWith("http")) {
             return ResponseEntity.status(410).body(
                 Map.of("error", "File no longer available", "message", "Please re-upload this file.")
             );
         }
-        return ResponseEntity.ok(Map.of("url", location, "name", file.getName()));
+        try {
+            java.net.URL url = new java.net.URL(location);
+            java.net.HttpURLConnection conn = (java.net.HttpURLConnection) url.openConnection();
+            conn.setRequestMethod("GET");
+            conn.setRequestProperty("User-Agent", "Mozilla/5.0");
+            conn.setInstanceFollowRedirects(true);
+            conn.setConnectTimeout(10000);
+            conn.setReadTimeout(30000);
+            conn.connect();
+            int status = conn.getResponseCode();
+            System.out.println("DEBUG proxyDownload: url=" + location + " status=" + status);
+            if (status >= 400) {
+                return ResponseEntity.status(410).body(
+                    Map.of("error", "File no longer available", "message", "Please re-upload this file.")
+                );
+            }
+            byte[] bytes = conn.getInputStream().readAllBytes();
+            String mimeType = file.getType() != null ? file.getType() : "application/octet-stream";
+            String encodedName = java.net.URLEncoder.encode(file.getName(), "UTF-8").replace("+", "%20");
+            return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + file.getName() + "\"; filename*=UTF-8''" + encodedName)
+                .header(HttpHeaders.CONTENT_TYPE, mimeType)
+                .header(HttpHeaders.CONTENT_LENGTH, String.valueOf(bytes.length))
+                .header("Access-Control-Expose-Headers", HttpHeaders.CONTENT_DISPOSITION)
+                .body(bytes);
+        } catch (Exception e) {
+            System.out.println("DEBUG proxyDownload error: " + e.getMessage());
+            return ResponseEntity.status(502).body(
+                Map.of("error", "Download failed", "message", e.getMessage())
+            );
+        }
     }
 
     @DeleteMapping("/cleanup-legacy")
