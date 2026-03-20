@@ -216,16 +216,22 @@ public class FileMetadataService {
         if (fileOpt.isEmpty()) throw new RuntimeException("File not found");
 
         FileMetadataDocument file = fileOpt.get();
+        System.out.println("DEBUG getFileForDownload - fileId: " + fileId);
+        System.out.println("DEBUG getFileForDownload - file.clerkId: " + file.getClerkId());
+        System.out.println("DEBUG getFileForDownload - file.isPublic: " + file.isPublic());
 
         // Public files — no auth check needed
         if (file.isPublic()) return file;
 
         // Private files — check ownership
         String clerkId = SecurityContextHolder.getContext().getAuthentication().getName();
+        System.out.println("DEBUG getFileForDownload - JWT clerkId: " + clerkId);
+        
         if (file.getClerkId() == null || file.getClerkId().equals(clerkId)) {
             return file;
         }
 
+        System.out.println("DEBUG getFileForDownload - ACCESS DENIED: file.clerkId=" + file.getClerkId() + " != JWT clerkId=" + clerkId);
         throw new RuntimeException("File not found or access denied");
     }
 
