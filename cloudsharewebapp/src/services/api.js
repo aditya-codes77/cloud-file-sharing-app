@@ -81,15 +81,14 @@ export const fileAPI = {
             throw new Error(err.message || 'Failed to download file');
         }
 
-        const blob = await response.blob();
-        const blobUrl = window.URL.createObjectURL(blob);
+        const data = await response.json();
         const a = document.createElement('a');
-        a.href = blobUrl;
-        a.download = fileName || 'download';
+        a.href = data.url;
+        a.download = data.name || fileName || 'download';
+        a.target = '_blank';
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
-        window.URL.revokeObjectURL(blobUrl);
     },
 
     // Clean up legacy files with dead local paths
