@@ -17,10 +17,9 @@ A full-stack file sharing application with React frontend, Spring Boot backend, 
 
 ## 🌐 Live Demo
 
-**Frontend**: https://cloud-file-sharing-app.vercel.app/
+**Frontend**: https://cloud-file-sharing-app.vercel.app/<br>
 **Backend API**: https://cloud-file-sharing-app.onrender.com
 
-> Replace with your actual deployment URLs after deploying
 
 ## 📁 Project Structure
 
