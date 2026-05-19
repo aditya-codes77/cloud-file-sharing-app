@@ -246,7 +246,7 @@ This project is for educational purposes.
 
 ## 👨‍💻 Author
 
-Aditya Kaushik
+Aditya Narayan Kaushik
 
 ## 🙏 Acknowledgments
 
